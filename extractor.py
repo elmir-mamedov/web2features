@@ -1,6 +1,74 @@
 import ollama
 import json
 import re
+from pydantic import BaseModel, field_validator
+from typing import Literal
+
+
+class CompanyFeatures(BaseModel):
+    company_name: str | None = None
+    industry: str | None = None
+    hq_country: str | None = None
+    company_size_signal: Literal["startup", "SME", "enterprise", "unknown"] = "unknown"
+    main_product_or_service: str | None = None
+    target_customer: Literal["B2B", "B2C", "both", "unknown"] = "unknown"
+    growth_signals: list[str] = []
+    risk_flags: list[str] = []
+    language: str | None = None
+
+    @field_validator("growth_signals", "risk_flags", mode="before")
+    @classmethod
+    def coerce_to_list(cls, v):
+        """
+        If the LLM returns a string instead of a list, convert it.
+        e.g. "hiring, expansion" -> ["hiring", "expansion"]
+        e.g. "none" -> []
+        e.g. null -> []
+        """
+        if v is None:
+            return []
+        if isinstance(v, str):
+            if v.lower() in ("none", "null", "n/a", ""):
+                return []
+            return [item.strip() for item in v.split(",")]
+        return v
+
+    @field_validator("company_size_signal", mode="before")
+    @classmethod
+    def normalize_size(cls, v):
+        """
+        Catch variations like 'small-medium', 'large', 'mid-size' etc.
+        and map them to our allowed values.
+        """
+        if not isinstance(v, str):
+            return "unknown"
+        v = v.lower().strip()
+        if any(x in v for x in ["startup", "early"]):
+            return "startup"
+        if any(x in v for x in ["sme", "small", "medium", "mid"]):
+            return "SME"
+        if any(x in v for x in ["enterprise", "large", "corporate"]):
+            return "enterprise"
+        return "unknown"
+
+    @field_validator("target_customer", mode="before")
+    @classmethod
+    def normalize_target(cls, v):
+        """
+        Catch variations like 'B2B | B2C', 'business', 'consumers' etc.
+        """
+        if not isinstance(v, str):
+            return "unknown"
+        v_lower = v.lower().strip()
+        has_b2b = "b2b" in v_lower or "business" in v_lower
+        has_b2c = "b2c" in v_lower or "consumer" in v_lower or "individual" in v_lower
+        if has_b2b and has_b2c:
+            return "both"
+        if has_b2b:
+            return "B2B"
+        if has_b2c:
+            return "B2C"
+        return "unknown"
 
 
 EXTRACTION_PROMPT = """You are a business intelligence analyst. Extract structured information from the company webpage text below.
@@ -29,12 +97,13 @@ Webpage text:
 """
 
 
-def extract_company_features(text: str, model: str = "llama3.1:8b") -> dict:
+def extract_company_features(text: str, model: str = "llama3.1:8b") -> CompanyFeatures | None:
     """
-    Sends scraped text to local Ollama model and returns structured features.
+    Sends scraped text to local Ollama model and returns a validated
+    CompanyFeatures object, or None if extraction failed.
     """
     if not text:
-        return {}
+        return None
 
     prompt = EXTRACTION_PROMPT.format(text=text)
 
@@ -42,24 +111,24 @@ def extract_company_features(text: str, model: str = "llama3.1:8b") -> dict:
         response = ollama.chat(
             model=model,
             messages=[{"role": "user", "content": prompt}],
-            options={"temperature": 0}  # deterministic output
+            options={"temperature": 0}
         )
         raw = response.message.content.strip()
 
-        # Sometimes models wrap JSON in markdown — strip it just in case
+        # Strip markdown code blocks if model adds them
         raw = re.sub(r"^```json\s*", "", raw)
         raw = re.sub(r"^```\s*", "", raw)
         raw = re.sub(r"\s*```$", "", raw)
 
-        return json.loads(raw)
+        data = json.loads(raw)
+        return CompanyFeatures(**data)
 
     except json.JSONDecodeError as e:
         print(f"[extractor] JSON parse failed: {e}")
-        print(f"[extractor] Raw output was:\n{raw}")
-        return {}
+        return None
     except Exception as e:
-        print(f"[extractor] Ollama error: {e}")
-        return {}
+        print(f"[extractor] Error: {e}")
+        return None
 
 
 if __name__ == "__main__":
@@ -70,4 +139,5 @@ if __name__ == "__main__":
     print("Extracting features...\n")
 
     features = extract_company_features(text)
-    print(json.dumps(features, indent=2, ensure_ascii=False))
+    if features:
+        print(features.model_dump_json(indent=2))
