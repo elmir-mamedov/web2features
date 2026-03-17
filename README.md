@@ -45,11 +45,24 @@ python main.py
 
 Results are saved to `output/features.csv`.
 
-## Known limitations & next steps
+## Known limitations
 
 - Some sites block plain `requests` (e.g. Revolut → 403) — `curl_cffi` would fix this
-- `hq_country` extraction is weak on homepages — a Companies House / Obchodní rejstřík 
+- `hq_country` extraction is weak on homepages — a Companies House / Obchodní rejstřík
   scraper would give cleaner data
-- Growth signals are inferred, not sourced — adding a news scraper per company 
+- Growth signals are inferred, not sourced — adding a news scraper per company
   would make them more reliable
 - Prompt is English-only optimized — works on Czech but could be improved
+
+## Next steps
+
+- **curl_cffi fallback** — reliable scraping against Cloudflare-protected sites
+- **Multi-page scraping** — scrape `/about` and `/careers` pages per company for richer signal
+- **Confidence scores** — rule-based confidence per extracted field so downstream models
+  know which features to trust
+- **DeepEval integration** — hallucination and faithfulness metrics to verify extracted
+  features are actually grounded in the scraped text, not model training memory
+- **RAG evolution** — pre-index company documents and news into a vector database
+  (e.g. with `nomic-embed-text`) so features can be queried
+  instantly rather than scraped on demand — the natural production-scale extension of
+  this pipeline
