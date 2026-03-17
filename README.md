@@ -60,6 +60,11 @@ Results are saved to `output/features.csv`.
 - **Multi-page scraping** — scrape `/about` and `/careers` pages per company for richer signal
 - **Confidence scores** — rule-based confidence per extracted field so downstream models
   know which features to trust
+- **Logprobs** — the theoretically correct way to measure extraction confidence is via
+  log probabilities: the model's internal token-level probability distribution exposes
+  how sure it was when choosing e.g. "B2B" over "B2C". Ollama exposes logprobs but
+  field-level aggregation across multi-token values is non-trivial. Revisit when moving
+  to a hosted model with a cleaner logprobs API (e.g. OpenAI).
 - **DeepEval integration** — hallucination and faithfulness metrics to verify extracted
   features are actually grounded in the scraped text, not model training memory
 - **RAG evolution** — pre-index company documents and news into a vector database
