@@ -2,7 +2,7 @@ import pandas as pd
 import json
 import os
 from scraper import scrape_company_text
-from extractor import extract_company_features
+from extractor import extract_company_features, CompanyFeatures
 
 COMPANIES = [
     {"name": "Fidoo",       "url": "https://www.fidoo.com"},
@@ -10,25 +10,23 @@ COMPANIES = [
     {"name": "Stripe",      "url": "https://www.stripe.com"},
     {"name": "Brex",        "url": "https://www.brex.com"},
     {"name": "Spendesk",    "url": "https://www.spendesk.com"},
+    {"name": "Ahold Delhaize", "url": "https://aholddelhaize.com"},
 ]
 
 
-def flatten_features(company_name: str, url: str, features: dict) -> dict:
-    """
-    Flattens nested lists into strings so the row fits neatly in a CSV.
-    """
+def flatten_features(company_name: str, url: str, features: CompanyFeatures) -> dict:
     return {
         "input_name":           company_name,
         "url":                  url,
-        "company_name":         features.get("company_name"),
-        "industry":             features.get("industry"),
-        "hq_country":           features.get("hq_country"),
-        "company_size_signal":  features.get("company_size_signal"),
-        "main_product":         features.get("main_product_or_service"),
-        "target_customer":      features.get("target_customer"),
-        "growth_signals":       ", ".join(features.get("growth_signals", [])),
-        "risk_flags":           ", ".join(features.get("risk_flags", [])),
-        "language":             features.get("language"),
+        "company_name":         features.company_name,
+        "industry":             features.industry,
+        "hq_country":           features.hq_country,
+        "company_size_signal":  features.company_size_signal,
+        "main_product":         features.main_product_or_service,
+        "target_customer":      features.target_customer,
+        "growth_signals":       ", ".join(features.growth_signals),
+        "risk_flags":           ", ".join(features.risk_flags),
+        "language":             features.language,
     }
 
 
@@ -55,7 +53,7 @@ def run_pipeline(companies: list, output_path: str = "output/features.csv"):
 
         row = flatten_features(name, url, features)
         rows.append(row)
-        print(f"[{name}] Done — {json.dumps(features, ensure_ascii=False)}")
+        print(f"[{name}] Done — {features.model_dump_json()}")
 
     if not rows:
         print("\nNo data extracted.")
