@@ -3,6 +3,9 @@ import json
 import re
 from pydantic import BaseModel, field_validator
 from typing import Literal
+from logger import setup_logger
+
+logger = setup_logger()
 
 
 class CompanyFeatures(BaseModel):
@@ -130,15 +133,17 @@ def extract_company_features(
         raw = re.sub(r"^```json\s*", "", raw)
         raw = re.sub(r"^```\s*", "", raw)
         raw = re.sub(r"\s*```$", "", raw)
-
+        logger.debug(f"Raw LLM output: {raw}")
         data = json.loads(raw)
         return CompanyFeatures(**data)
 
     except json.JSONDecodeError as e:
-        print(f"[extractor] JSON parse failed: {e}")
+        logger.error(f"JSON parse failed: {e}")
+        #print(f"[extractor] JSON parse failed: {e}")
         return None
     except Exception as e:
-        print(f"[extractor] Error: {e}")
+        logger.error(f"Ollama error: {e}")
+        #print(f"[extractor] Error: {e}")
         return None
 
 

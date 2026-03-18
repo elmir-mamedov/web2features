@@ -1,6 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 import re
+from logger import setup_logger
+
+logger = setup_logger()
 
 
 def fetch_company_news(company_name: str, company_url: str = "", max_articles: int = 10) -> list[dict]:
@@ -20,7 +23,8 @@ def fetch_company_news(company_name: str, company_url: str = "", max_articles: i
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
     except requests.RequestException as e:
-        print(f"[news] Failed to fetch news for {company_name}: {e}")
+        logger.error(f"Failed to fetch news for {company_name}: {e}")
+        #print(f"[news] Failed to fetch news for {company_name}: {e}")
         return []
 
     soup = BeautifulSoup(response.text, "xml")

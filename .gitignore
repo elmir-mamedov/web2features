@@ -5,3 +5,4 @@ __pycache__/
 output/
 .python-version
 .idea/
+logs/
