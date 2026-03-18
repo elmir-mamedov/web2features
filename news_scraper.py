@@ -4,11 +4,7 @@ import re
 
 
 def fetch_company_news(company_name: str, max_articles: int = 10) -> list[dict]:
-    """
-    Fetches recent news headlines about a company via Google News RSS.
-    Returns a list of articles with title, description and link.
-    """
-    query = company_name.replace(" ", "+") + "+company+fintech"
+    query = company_name.replace(" ", "+")
     url = f"https://www.bing.com/news/search?q={query}&format=rss"
 
     headers = {
@@ -67,7 +63,7 @@ def format_news_for_prompt(articles: list[dict]) -> str:
 
 
 if __name__ == "__main__":
-    company = "Brex"
+    company = "lasvit"
     print(f"Fetching news for {company}...\n")
 
     articles = fetch_company_news(company)

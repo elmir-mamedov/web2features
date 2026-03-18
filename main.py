@@ -11,6 +11,7 @@ COMPANIES = [
     {"name": "Brex",        "url": "https://www.brex.com"},
     {"name": "Spendesk",    "url": "https://www.spendesk.com"},
     {"name": "Ahold Delhaize", "url": "https://aholddelhaize.com"},
+    {"name": "Lasvit",      "url": "https://www.lasvit.com"},
 ]
 
 
