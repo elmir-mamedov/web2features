@@ -3,6 +3,7 @@ import json
 import os
 from scraper import scrape_company_text
 from extractor import extract_company_features, CompanyFeatures
+from news_scraper import fetch_company_news, format_news_for_prompt
 
 COMPANIES = [
     {"name": "Fidoo",       "url": "https://www.fidoo.com"},
@@ -45,8 +46,12 @@ def run_pipeline(companies: list, output_path: str = "output/features.csv"):
             print(f"[{name}] Skipping — nothing scraped.")
             continue
 
-        print(f"[{name}] Scraped {len(text)} chars. Extracting features...")
-        features = extract_company_features(text)
+        print(f"[{name}] Fetching news...")
+        articles = fetch_company_news(name)
+        news_text = format_news_for_prompt(articles)
+
+        print(f"[{name}] Scraped {len(text)} chars + {len(articles)} news articles. Extracting features...")
+        features = extract_company_features(text, news=news_text)
 
         if not features:
             print(f"[{name}] Skipping — extraction failed.")

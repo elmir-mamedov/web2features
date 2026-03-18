@@ -63,7 +63,7 @@ def format_news_for_prompt(articles: list[dict]) -> str:
 
 
 if __name__ == "__main__":
-    company = "lasvit"
+    company = "fidoo"
     print(f"Fetching news for {company}...\n")
 
     articles = fetch_company_news(company)
