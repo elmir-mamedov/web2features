@@ -89,8 +89,7 @@ Return ONLY a valid JSON object with exactly these fields:
   "main_product_or_service": "string, max 15 words",
   "target_customer": "B2B | B2C | both | unknown",
   "growth_signals": ["list of short strings, or empty list"],
-  "risk_flags": ["list of short strings, or empty list"],
-  "language": "language of the homepage text"
+  "risk_flags": ["list of short strings, or empty list"]
 }}
 
 Rules:
@@ -98,7 +97,6 @@ Rules:
 - If you are not sure about a field, use null or "unknown".
 - growth_signals: things like fundraising, hiring, expansion, acquisition, new products.
 - risk_flags: things like layoffs, lawsuits, losses, restructuring, valuation drop.
-- language: 
 
 --- HOMEPAGE TEXT ---
 {text}
