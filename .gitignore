@@ -6,3 +6,4 @@ output/
 .python-version
 .idea/
 logs/
+*.csv

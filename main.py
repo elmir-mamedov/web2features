@@ -6,21 +6,39 @@ from extractor import extract_company_features, CompanyFeatures
 from news_scraper import fetch_company_news, format_news_for_prompt
 from logger import setup_logger
 from datetime import datetime
+import argparse
 
 logger = setup_logger()
 
 COMPANIES = [
-  #  {"name": "Fidoo",       "url": "https://www.fidoo.com"},
-  #  {"name": "Revolut",     "url": "https://www.revolut.com"},
-#    {"name": "Stripe",      "url": "https://www.stripe.com"},
- #   {"name": "Brex",        "url": "https://www.brex.com"},
-  #  {"name": "Spendesk",    "url": "https://www.spendesk.com"},
-   # {"name": "Ahold Delhaize", "url": "https://aholddelhaize.com"},
-    #{"name": "Lasvit",      "url": "https://www.lasvit.com"},
-    {"name": "Leuven University",      "url": "https://www.kuleuven.be/english/kuleuven/"},
-    {"name": "UCT Prague", "url": "https://www.vscht.cz/"},
-
+    {"name": "Fidoo",       "url": "https://www.fidoo.com"},
+    {"name": "Ahold Delhaize", "url": "https://aholddelhaize.com"},
 ]
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="web2features — extract structured company intelligence from the web"
+    )
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--url",
+        type=str,
+        help="scrape a single company URL e.g. --url https://www.fidoo.com"
+    )
+    group.add_argument(
+        "--input",
+        type=str,
+        help="path to a CSV file with 'name' and 'url' columns e.g. --input companies.csv"
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="output/features.csv",
+        help="path to output CSV file (default: output/features.csv)"
+    )
+
+    return parser.parse_args()
 
 def flatten_features(company_name: str, url: str, features: CompanyFeatures) -> dict:
     return {
@@ -97,4 +115,29 @@ def run_pipeline(companies: list, output_path: str = "output/features.csv"):
     logger.info(f"Saved news log to {news_log_path}")
 
 if __name__ == "__main__":
-    run_pipeline(COMPANIES)
+    args = parse_args()
+
+    if args.url:
+        # single URL mode — extract company name from domain
+        domain = args.url.replace("https://www.", "").replace("https://", "").split(".")[0]
+        companies = [{"name": domain.capitalize(), "url": args.url}]
+        logger.info(f"Single URL mode: {args.url}")
+
+    elif args.input:
+        # CSV input mode
+        if not os.path.exists(args.input):
+            logger.error(f"Input file not found: {args.input}")
+            exit(1)
+        input_df = pd.read_csv(args.input)
+        if not {"name", "url"}.issubset(input_df.columns):
+            logger.error("Input CSV must have 'name' and 'url' columns")
+            exit(1)
+        companies = input_df[["name", "url"]].to_dict(orient="records")
+        logger.info(f"CSV input mode: {len(companies)} companies from {args.input}")
+
+    else:
+        # default mode — use hardcoded COMPANIES list
+        companies = COMPANIES
+        logger.info(f"Default mode: {len(companies)} hardcoded companies")
+
+    run_pipeline(companies, output_path=args.output)
