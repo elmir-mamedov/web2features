@@ -28,7 +28,6 @@ def flatten_features(company_name: str, url: str, features: CompanyFeatures) -> 
         "target_customer":      features.target_customer,
         "growth_signals":       ", ".join(features.growth_signals),
         "risk_flags":           ", ".join(features.risk_flags),
-        "language":             features.language,
     }
 
 

@@ -14,7 +14,6 @@ class CompanyFeatures(BaseModel):
     target_customer: Literal["B2B", "B2C", "both", "unknown"] = "unknown"
     growth_signals: list[str] = []
     risk_flags: list[str] = []
-    language: str | None = None
 
     @field_validator("growth_signals", "risk_flags", mode="before")
     @classmethod
