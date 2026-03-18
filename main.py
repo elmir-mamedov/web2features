@@ -6,13 +6,16 @@ from extractor import extract_company_features, CompanyFeatures
 from news_scraper import fetch_company_news, format_news_for_prompt
 
 COMPANIES = [
-    {"name": "Fidoo",       "url": "https://www.fidoo.com"},
-    {"name": "Revolut",     "url": "https://www.revolut.com"},
-    {"name": "Stripe",      "url": "https://www.stripe.com"},
-    {"name": "Brex",        "url": "https://www.brex.com"},
-    {"name": "Spendesk",    "url": "https://www.spendesk.com"},
-    {"name": "Ahold Delhaize", "url": "https://aholddelhaize.com"},
-    {"name": "Lasvit",      "url": "https://www.lasvit.com"},
+  #  {"name": "Fidoo",       "url": "https://www.fidoo.com"},
+  #  {"name": "Revolut",     "url": "https://www.revolut.com"},
+#    {"name": "Stripe",      "url": "https://www.stripe.com"},
+ #   {"name": "Brex",        "url": "https://www.brex.com"},
+  #  {"name": "Spendesk",    "url": "https://www.spendesk.com"},
+   # {"name": "Ahold Delhaize", "url": "https://aholddelhaize.com"},
+    #{"name": "Lasvit",      "url": "https://www.lasvit.com"},
+    {"name": "Leuven University",      "url": "https://www.kuleuven.be/english/kuleuven/"},
+    {"name": "UCT Prague", "url": "https://www.vscht.cz/"},
+
 ]
 
 
@@ -46,7 +49,7 @@ def run_pipeline(companies: list, output_path: str = "output/features.csv"):
             continue
 
         print(f"[{name}] Fetching news...")
-        articles = fetch_company_news(name)
+        articles = fetch_company_news(name, company_url=url)
         news_text = format_news_for_prompt(articles)
 
         print(f"[{name}] Scraped {len(text)} chars + {len(articles)} news articles. Extracting features...")

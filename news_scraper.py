@@ -3,9 +3,10 @@ from bs4 import BeautifulSoup
 import re
 
 
-def fetch_company_news(company_name: str, max_articles: int = 10) -> list[dict]:
-    query = company_name.replace(" ", "+")
-    url = f"https://www.bing.com/news/search?q={query}&format=rss"
+def fetch_company_news(company_name: str, company_url: str = "", max_articles: int = 10) -> list[dict]:
+    domain = company_url.replace("https://www.", "").replace("https://", "").split("/")[0].split(".")[0]
+    query = f"{company_name} {domain}".strip().replace(" ", "+") if domain else company_name
+    url = f"https://www.bing.com/news/search?q={query}&format=rss" # Using company url in query reduces entity ambiguity
 
     headers = {
         "User-Agent": (
@@ -63,8 +64,9 @@ def format_news_for_prompt(articles: list[dict]) -> str:
 
 
 if __name__ == "__main__":
-    company = "fidoo"
-    print(f"Fetching news for {company}...\n")
+    company_name = "Ahold Delhaize"
+    company_url = "https://aholddelhaize.com"
+    print(f"Fetching news for {company_name}...\n")
 
-    articles = fetch_company_news(company)
+    articles = fetch_company_news(company_name, company_url=company_url)
     print(format_news_for_prompt(articles))
