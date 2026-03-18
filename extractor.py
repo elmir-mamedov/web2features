@@ -14,7 +14,6 @@ class CompanyFeatures(BaseModel):
     target_customer: Literal["B2B", "B2C", "both", "unknown"] = "unknown"
     growth_signals: list[str] = []
     risk_flags: list[str] = []
-    language: str | None = None
 
     @field_validator("growth_signals", "risk_flags", mode="before")
     @classmethod
@@ -71,7 +70,14 @@ class CompanyFeatures(BaseModel):
         return "unknown"
 
 
-EXTRACTION_PROMPT = """You are a business intelligence analyst. Extract structured information from the company webpage text below.
+EXTRACTION_PROMPT = """You are a business intelligence analyst. Extract structured information from the data below.
+
+You have two sources:
+1. HOMEPAGE TEXT — describes what the company does
+2. RECENT NEWS — headlines about the company from the last 90 days
+
+Use both sources together. News is especially useful for growth_signals and risk_flags
+since companies never report bad news on their own homepage.
 
 Return ONLY a valid JSON object with exactly these fields:
 {{
@@ -82,30 +88,36 @@ Return ONLY a valid JSON object with exactly these fields:
   "main_product_or_service": "string, max 15 words",
   "target_customer": "B2B | B2C | both | unknown",
   "growth_signals": ["list of short strings, or empty list"],
-  "risk_flags": ["list of short strings, or empty list"],
-  "language": "language of the webpage text"
+  "risk_flags": ["list of short strings, or empty list"]
 }}
 
 Rules:
 - Return ONLY the JSON. No explanation, no markdown, no code blocks.
 - If you are not sure about a field, use null or "unknown".
-- growth_signals: things like fundraising, hiring, expansion, new products.
-- risk_flags: things like layoffs, lawsuits, losses, restructuring.
+- growth_signals: things like fundraising, hiring, expansion, acquisition, new products.
+- risk_flags: things like layoffs, lawsuits, losses, restructuring, valuation drop.
 
-Webpage text:
+--- HOMEPAGE TEXT ---
 {text}
+
+--- RECENT NEWS ---
+{news}
 """
 
 
-def extract_company_features(text: str, model: str = "llama3.1:8b") -> CompanyFeatures | None:
+def extract_company_features(
+    text: str,
+    news: str = "No recent news found.",
+    model: str = "llama3.1:8b"
+) -> CompanyFeatures | None:
     """
-    Sends scraped text to local Ollama model and returns a validated
-    CompanyFeatures object, or None if extraction failed.
+    Sends scraped homepage text + recent news to local Ollama model
+    and returns a validated CompanyFeatures object, or None if extraction failed.
     """
     if not text:
         return None
 
-    prompt = EXTRACTION_PROMPT.format(text=text)
+    prompt = EXTRACTION_PROMPT.format(text=text, news=news)
 
     try:
         response = ollama.chat(
@@ -115,7 +127,6 @@ def extract_company_features(text: str, model: str = "llama3.1:8b") -> CompanyFe
         )
         raw = response.message.content.strip()
 
-        # Strip markdown code blocks if model adds them
         raw = re.sub(r"^```json\s*", "", raw)
         raw = re.sub(r"^```\s*", "", raw)
         raw = re.sub(r"\s*```$", "", raw)
