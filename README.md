@@ -50,7 +50,6 @@ Results are saved to `output/features.csv`.
 
 ## Known limitations
 
-- Some sites block plain `requests` (e.g. Revolut → 403) — `curl_cffi` would fix this
 - News signals are sourced from Bing RSS — descriptions are often short and 
   recent coverage varies by company size. Less-known companies may return 
   irrelevant or sparse results.
