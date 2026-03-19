@@ -24,7 +24,8 @@ in fintech credit scoring and business intelligence.
 | Ahold Delhaize | retail | enterprise | profit up 55% Q3 | |
 ## Stack
 
-- `requests` + `BeautifulSoup` — scraping and HTML parsing
+- `curl_cffi` — reliable scraping against Cloudflare-protected sites
+- `BeautifulSoup` — HTML parsing
 - `ollama` — local LLM inference (llama3.1:8b)
 - `pandas` — feature table output
 - `registry_scraper.py` — hybrid LLM + regex extraction from Czech Business Registry
@@ -66,7 +67,6 @@ Results are saved to `output/features.csv`.
 
 ## Next steps
 
-- **curl_cffi fallback** — reliable scraping against Cloudflare-protected sites
 - **Multi-page scraping** — scrape `/about` and `/careers` pages per company for richer signal
 - **Confidence scores** — rule-based confidence per extracted field so downstream models
   know which features to trust
