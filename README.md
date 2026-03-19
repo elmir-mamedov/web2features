@@ -9,18 +9,15 @@ in fintech credit scoring and business intelligence.
 ## What it does
 
 1. **Scrapes** a company's public webpage (`scraper.py`)
-2. **Extracts structured features** via a local LLM prompt (`extractor.py`)
-3. **Saves** results as a CSV feature table ready for downstream models (`main.py`)
-
+2. **Fetches recent news** via Bing News RSS for each company (`news_scraper.py`)
+3. **Extracts structured features** from homepage + news via a local LLM prompt (`extractor.py`)
 ## Output example
 
-| company | industry | size_signal | target_customer | growth_signals |
+| company | industry | size_signal | growth_signals | risk_flags |
 |---|---|---|---|---|
-| Fidoo | Software/Finance | SME | B2B | fundraising, expansion |
-| Stripe | Financial Services | enterprise | B2B\|B2C | fundraising, expansion |
-| Brex | financial technology | enterprise | B2B | fundraising, hiring |
-| Spendesk | Software, Finance | enterprise | B2B | fundraising, hiring |
-
+| Fidoo | fintech | SME | fundraising, hiring, expansion | |
+| Brex | financial technology | enterprise | grew enterprise 80%, AAA bond rating | |
+| Ahold Delhaize | retail | enterprise | profit up 55% Q3 | |
 ## Stack
 
 - `requests` + `BeautifulSoup` — scraping and HTML parsing
@@ -50,13 +47,21 @@ Results are saved to `output/features.csv`.
 - Some sites block plain `requests` (e.g. Revolut → 403) — `curl_cffi` would fix this
 - `hq_country` extraction is weak on homepages — a Companies House / Obchodní rejstřík
   scraper would give cleaner data
-- Growth signals are inferred, not sourced — adding a news scraper per company
-  would make them more reliable
+- News signals are sourced from Bing RSS — descriptions are often short and 
+  recent coverage varies by company size. Less-known companies may return 
+  irrelevant or sparse results.
+- Entity disambiguation is imperfect — companies sharing a name with unrelated 
+  entities (e.g. a Czech construction firm named Brex) can pollute news results. 
+  Domain-based query helps but does not fully solve this.
 - Prompt is English-only optimized — works on Czech but could be improved
+
 
 ## Next steps
 
 - **curl_cffi fallback** — reliable scraping against Cloudflare-protected sites
+- **Czech business registry** — scrape Obchodní rejstřík (justice.cz) for 
+  authoritative structured data: ICO, legal form, registered capital, founding 
+  date, board members, and ownership structure
 - **Multi-page scraping** — scrape `/about` and `/careers` pages per company for richer signal
 - **Confidence scores** — rule-based confidence per extracted field so downstream models
   know which features to trust
