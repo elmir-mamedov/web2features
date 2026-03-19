@@ -26,7 +26,6 @@ Return ONLY a valid JSON object with exactly these fields:
   "legal_form": "string or null — e.g. 'Akciová společnost', 'Společnost s ručením omezeným'",
   "founded": "string or null — founding date in original Czech format e.g. '10. února 2012'",
   "address": "string or null — current registered address only",
-  "capital_czk": "integer or null — this is CRITICAL — copy the exact number from 'Základní kapitál:' field. Count digits carefully. 2 000 000 = 2000000, 28 404 400 = 28404400.
   "parent_company": "string or null — name of sole shareholder or majority owner if present",
   "board_members": [
     {{"name": "string — full name only", "role": "string — their role e.g. předseda představenstva"}}
@@ -40,7 +39,6 @@ Rules:
 - board_members should include jednatelé, předseda/člen představenstva, předseda/člen správní rady — whoever is the current statutory body. Include role titles 
 - recent_changes: look for mergers (fúze), acquisitions, capital increases, board restructuring. Always include the year in which the change had occured if it's the year is present in the text.
 - For parent_company: look for 'Jediný akcionář' or the main 'Společník' with 100% share.
-- capital_czk: return as integer only, no currency symbol, no spaces e.g. 28404400
 
 Registry text:
 {text}
@@ -102,9 +100,6 @@ def get_subjekt_id(ico: str) -> str | None:
 
 
 def scrape_and_extract(subjekt_id: str, ico: str = "", model: str = "llama3.1:8b") -> dict:
-    """
-    Scrape current registry extract and use LLM to extract structured fields.
-    """
     url = DETAIL_URL.format(subjekt_id=subjekt_id)
 
     try:
@@ -118,14 +113,18 @@ def scrape_and_extract(subjekt_id: str, ico: str = "", model: str = "llama3.1:8b
     text = soup.get_text(separator=" ", strip=True)
     text = re.sub(r"\s+", " ", text)
 
-    # trim boilerplate footer
     cutoff = text.find("Stáhnout PDF")
     if cutoff > 0:
         text = text[:cutoff]
 
-    logger.debug(f"Registry text length: {len(text)} chars")
+    # regex for capital — LLMs are unreliable with numbers
+    capital_czk = None
+    capital_match = re.search(r"Základní kapitál:\s*([\d\s]+),-\s*Kč", text)
+    if capital_match:
+        capital_czk = int(capital_match.group(1).replace(" ", ""))
+        logger.debug(f"Regex extracted capital: {capital_czk}")
 
-    # LLM extraction
+    # LLM for everything else
     prompt = REGISTRY_PROMPT.format(text=text)
     try:
         llm_response = ollama.chat(
@@ -138,13 +137,24 @@ def scrape_and_extract(subjekt_id: str, ico: str = "", model: str = "llama3.1:8b
         raw = re.sub(r"^```\s*", "", raw)
         raw = re.sub(r"\s*```$", "", raw)
         extracted = json.loads(raw)
-        logger.debug(f"Registry extraction for ICO {ico}: {extracted}")
+        logger.debug(f"LLM extracted: {extracted}")
     except json.JSONDecodeError as e:
-        logger.error(f"Registry JSON parse failed for subjektId {subjekt_id}: {e}")
+        logger.error(f"Registry JSON parse failed: {e}")
         extracted = {}
     except Exception as e:
-        logger.error(f"Registry LLM extraction failed for subjektId {subjekt_id}: {e}")
+        logger.error(f"Registry LLM extraction failed: {e}")
         extracted = {}
+
+    # filter recent_changes to only keep entries mentioning 2024 or 2025
+    if "recent_changes" in extracted:
+        extracted["recent_changes"] = [
+            c for c in extracted["recent_changes"]
+            if any(year in c for year in ["2024", "2025", "2026"])
+        ]
+
+    # regex value overrides LLM value for capital
+    if capital_czk is not None:
+        extracted["capital_czk"] = capital_czk
 
     return {
         "ico":          ico,
