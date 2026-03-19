@@ -7,12 +7,15 @@ from news_scraper import fetch_company_news, format_news_for_prompt
 from logger import setup_logger
 from datetime import datetime
 import argparse
+from registry_scraper import get_registry_data
+
 
 logger = setup_logger()
 
 COMPANIES = [
     {"name": "Fidoo",       "url": "https://www.fidoo.com"},
     {"name": "Ahold Delhaize", "url": "https://aholddelhaize.com"},
+    {"name": "Alza",        "url": "https://www.alza.cz"},
 ]
 
 def parse_args():
@@ -57,16 +60,18 @@ def flatten_features(company_name: str, url: str, features: CompanyFeatures) -> 
 
 def run_pipeline(companies: list, output_path: str = "output/features.csv"):
     os.makedirs("output", exist_ok=True)
-    os.makedirs("logs", exist_ok=True)  # add this
+    os.makedirs("logs", exist_ok=True)
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     rows = []
-    news_log = []  # collect all news records here
+    registry_rows = []
+    news_log = []
 
     for company in companies:
         name = company["name"]
         url  = company["url"]
-        logger.info(f"[{name}] Scraping {url} ...")
+        ico  = company.get("ico") or None  # optional field
 
+        logger.info(f"[{name}] Scraping {url} ...")
         text = scrape_company_text(url)
         if not text:
             logger.warning(f"[{name}] Skipping — nothing scraped.")
@@ -76,7 +81,6 @@ def run_pipeline(companies: list, output_path: str = "output/features.csv"):
         articles = fetch_company_news(name, company_url=url)
         news_text = format_news_for_prompt(articles)
 
-        # collect news record
         news_log.append({
             "company": name,
             "url": url,
@@ -96,15 +100,35 @@ def run_pipeline(companies: list, output_path: str = "output/features.csv"):
         rows.append(row)
         logger.info(f"[{name}] Done — {features.model_dump_json()}")
 
+        # registry lookup — only attempt for Czech companies
+        logger.info(f"[{name}] Looking up registry...")
+        registry_data = get_registry_data(name, ico=ico)
+        if registry_data:
+            registry_rows.append({
+                "input_name": name,
+                **registry_data
+            })
+            logger.info(f"[{name}] Registry data found — ICO {registry_data.get('ico')}")
+        else:
+            logger.info(f"[{name}] No registry data found — skipping.")
+
     if not rows:
         logger.warning("No data extracted.")
         return
 
+    # save features CSV
     df = pd.DataFrame(rows)
     df.to_csv(output_path, index=False)
     logger.info(f"Saved {len(df)} rows to {output_path}")
 
-    # save news log as pretty JSON
+    # save registry CSV
+    if registry_rows:
+        registry_df = pd.DataFrame(registry_rows)
+        registry_path = output_path.replace("features.csv", "registry.csv")
+        registry_df.to_csv(registry_path, index=False)
+        logger.info(f"Saved {len(registry_df)} registry rows to {registry_path}")
+
+    # save news log
     news_log_path = os.path.join("logs", f"news_{run_id}.json")
     with open(news_log_path, "w", encoding="utf-8") as f:
         json.dump({
@@ -124,7 +148,6 @@ if __name__ == "__main__":
         logger.info(f"Single URL mode: {args.url}")
 
     elif args.input:
-        # CSV input mode
         if not os.path.exists(args.input):
             logger.error(f"Input file not found: {args.input}")
             exit(1)
@@ -132,7 +155,11 @@ if __name__ == "__main__":
         if not {"name", "url"}.issubset(input_df.columns):
             logger.error("Input CSV must have 'name' and 'url' columns")
             exit(1)
-        companies = input_df[["name", "url"]].to_dict(orient="records")
+        # ico column is optional — fill missing with empty string
+        if "ico" not in input_df.columns:
+            input_df["ico"] = ""
+        input_df["ico"] = input_df["ico"].fillna("").astype(str)
+        companies = input_df[["name", "url", "ico"]].to_dict(orient="records")
         logger.info(f"CSV input mode: {len(companies)} companies from {args.input}")
 
     else:
