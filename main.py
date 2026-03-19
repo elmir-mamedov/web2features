@@ -9,12 +9,13 @@ from datetime import datetime
 import argparse
 from registry_scraper import get_registry_data
 
+
 logger = setup_logger()
 
 COMPANIES = [
     {"name": "Fidoo",       "url": "https://www.fidoo.com"},
     {"name": "Ahold Delhaize", "url": "https://aholddelhaize.com"},
-    {"name": "Alza",        "url": "https://www.alza.com"},
+    {"name": "Alza",        "url": "https://www.alza.cz"},
 ]
 
 def parse_args():
