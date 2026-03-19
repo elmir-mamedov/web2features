@@ -11,6 +11,10 @@ in fintech credit scoring and business intelligence.
 1. **Scrapes** a company's public webpage (`scraper.py`)
 2. **Fetches recent news** via Bing News RSS for each company (`news_scraper.py`)
 3. **Extracts structured features** from homepage + news via a local LLM prompt (`extractor.py`)
+4. **Looks up Czech business registry** (`registry_scraper.py`) — for Czech companies,
+   fetches authoritative data from justice.cz: legal form, founding date, registered
+   capital, board members, ownership structure, and recent structural changes
+
 ## Output example
 
 | company | industry | size_signal | growth_signals | risk_flags |
@@ -23,6 +27,7 @@ in fintech credit scoring and business intelligence.
 - `requests` + `BeautifulSoup` — scraping and HTML parsing
 - `ollama` — local LLM inference (llama3.1:8b)
 - `pandas` — feature table output
+- `registry_scraper.py` — hybrid LLM + regex extraction from Czech Business Registry
 - No external API keys required — runs fully locally
 
 ## Setup
@@ -45,8 +50,6 @@ Results are saved to `output/features.csv`.
 ## Known limitations
 
 - Some sites block plain `requests` (e.g. Revolut → 403) — `curl_cffi` would fix this
-- `hq_country` extraction is weak on homepages — a Companies House / Obchodní rejstřík
-  scraper would give cleaner data
 - News signals are sourced from Bing RSS — descriptions are often short and 
   recent coverage varies by company size. Less-known companies may return 
   irrelevant or sparse results.
@@ -54,14 +57,16 @@ Results are saved to `output/features.csv`.
   entities (e.g. a Czech construction firm named Brex) can pollute news results. 
   Domain-based query helps but does not fully solve this.
 - Prompt is English-only optimized — works on Czech but could be improved
-
+- Registry lookup is Czech-only — foreign companies (Stripe, Revolut etc.) are skipped
+  gracefully. A Companies House integration would cover UK companies.
+- LLMs are unreliable with exact numbers — registered capital is extracted via regex
+  rather than LLM to guarantee accuracy. Other numeric fields may still be imprecise.
+- `search_ico()` uses company name search which can return the wrong entity for common
+  names. Providing ICO directly is always more reliable.
 
 ## Next steps
 
 - **curl_cffi fallback** — reliable scraping against Cloudflare-protected sites
-- **Czech business registry** — scrape Obchodní rejstřík (justice.cz) for 
-  authoritative structured data: ICO, legal form, registered capital, founding 
-  date, board members, and ownership structure
 - **Multi-page scraping** — scrape `/about` and `/careers` pages per company for richer signal
 - **Confidence scores** — rule-based confidence per extracted field so downstream models
   know which features to trust
