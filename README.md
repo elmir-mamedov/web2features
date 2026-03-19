@@ -65,6 +65,7 @@ Results are saved to `output/features.csv`.
 - `search_ico()` uses company name search which can return the wrong entity for common
   names. Providing ICO directly is always more reliable.
 
+
 ## Next steps
 
 - **Multi-page scraping** — scrape `/about` and `/careers` pages per company for richer signal
