@@ -28,19 +28,26 @@ app = Flask(__name__)
 
 
 def stream_pipeline(name: str, url: str, ico: str = ""):
-    """
-    Generator function that runs the pipeline and yields SSE events.
-    Each event is a JSON object with type and data fields.
-    """
     def event(event_type: str, data: dict) -> str:
         return f"data: {json.dumps({'type': event_type, 'data': data})}\n\n"
 
-    # check ollama first
+    # validate inputs
+    if not name or not url:
+        yield event("error", {"message": "Company name and URL are both required"})
+        yield event("done", {"message": "Pipeline complete"})
+        return
+
+    if not url.startswith("http"):
+        yield event("error", {"message": "URL must start with http:// or https://"})
+        yield event("done", {"message": "Pipeline complete"})
+        return
+
     if not check_ollama():
         yield event("error", {
             "message": "Ollama is not running or llama3.1:8b is not installed. "
                        "Start Ollama and run: ollama pull llama3.1:8b"
         })
+        yield event("done", {"message": "Pipeline complete"})  # add this
         return
 
     # step 1 — scrape
@@ -48,6 +55,7 @@ def stream_pipeline(name: str, url: str, ico: str = ""):
     text = scrape_company_text(url)
     if not text:
         yield event("error", {"message": f"Failed to scrape {url}"})
+        yield event("done", {"message": "Pipeline complete"})  # add this
         return
     yield event("status", {"message": f"Scraped {len(text)} characters"})
 
@@ -62,6 +70,7 @@ def stream_pipeline(name: str, url: str, ico: str = ""):
     features = extract_company_features(text, news=news_text)
     if not features:
         yield event("error", {"message": "LLM extraction failed"})
+        yield event("done", {"message": "Pipeline complete"})  # add this
         return
     yield event("features", {"data": features.model_dump()})
     yield event("status", {"message": "Features extracted successfully"})

@@ -20,13 +20,13 @@
         <form id="analyzeForm" class="space-y-4 mb-10">
             <div>
                 <label class="block text-sm text-gray-400 mb-1">Company name</label>
-                <input type="text" name="name" placeholder="Fidoo"
+                <input type="text" name="name" placeholder="Fidoo" required
                     class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3
                            text-white placeholder-gray-600 focus:outline-none focus:border-blue-500">
             </div>
             <div>
                 <label class="block text-sm text-gray-400 mb-1">Website URL</label>
-                <input type="text" name="url" placeholder="https://www.fidoo.com"
+                <input type="text" name="url" placeholder="https://www.fidoo.com" required
                     class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3
                            text-white placeholder-gray-600 focus:outline-none focus:border-blue-500">
             </div>
@@ -196,6 +196,9 @@
                     renderRegistry(json.data.data);
                 } else if (json.type === "error") {
                     addLog(json.data.message, "text-red-500");
+                    spinner.classList.add("hidden");      // add these two lines
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Analyze";
                 } else if (json.type === "done") {
                     addLog("Done", "text-blue-400");
                     spinner.classList.add("hidden");
