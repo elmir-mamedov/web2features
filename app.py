@@ -5,6 +5,12 @@ from extractor import extract_company_features
 from news_scraper import fetch_company_news, format_news_for_prompt
 from registry_scraper import get_registry_data
 import ollama
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 def check_ollama() -> bool:
     """Check if Ollama is running and llama3.1:8b is available."""

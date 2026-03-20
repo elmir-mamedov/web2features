@@ -1,9 +1,9 @@
-import ollama
 import json
 import re
 from pydantic import BaseModel, field_validator
 from typing import Literal
 from logger import setup_logger
+from llm_client import chat
 
 logger = setup_logger()
 
@@ -110,8 +110,7 @@ Rules:
 
 def extract_company_features(
     text: str,
-    news: str = "No recent news found.",
-    model: str = "llama3.1:8b"
+    news: str = "No recent news found."
 ) -> CompanyFeatures | None:
     """
     Sends scraped homepage text + recent news to local Ollama model
@@ -123,12 +122,10 @@ def extract_company_features(
     prompt = EXTRACTION_PROMPT.format(text=text, news=news)
 
     try:
-        response = ollama.chat(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": 0}
+        raw = chat(
+            prompt=prompt,
+            system="You are a business intelligence analyst. Return ONLY valid JSON, no explanation, no markdown, no code blocks."
         )
-        raw = response.message.content.strip()
 
         raw = re.sub(r"^```json\s*", "", raw)
         raw = re.sub(r"^```\s*", "", raw)
@@ -139,18 +136,16 @@ def extract_company_features(
 
     except json.JSONDecodeError as e:
         logger.error(f"JSON parse failed: {e}")
-        #print(f"[extractor] JSON parse failed: {e}")
         return None
     except Exception as e:
-        logger.error(f"Ollama error: {e}")
-        #print(f"[extractor] Error: {e}")
+        logger.error(f"LLM error: {e}")
         return None
 
 
 if __name__ == "__main__":
     from scraper import scrape_company_text
 
-    url = "https://www.fidoo.com"
+    url = "https://www.billa.cz"
     text = scrape_company_text(url)
     print("Extracting features...\n")
 

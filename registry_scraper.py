@@ -1,9 +1,9 @@
 import requests
-import ollama
 import json
 import re
 from bs4 import BeautifulSoup
 from logger import setup_logger
+from llm_client import chat
 
 logger = setup_logger()
 
@@ -99,7 +99,7 @@ def get_subjekt_id(ico: str) -> str | None:
     return subjekt_id
 
 
-def scrape_and_extract(subjekt_id: str, ico: str = "", model: str = "llama3.1:8b") -> dict:
+def scrape_and_extract(subjekt_id: str, ico: str = "") -> dict:
     url = DETAIL_URL.format(subjekt_id=subjekt_id)
 
     try:
@@ -127,12 +127,10 @@ def scrape_and_extract(subjekt_id: str, ico: str = "", model: str = "llama3.1:8b
     # LLM for everything else
     prompt = REGISTRY_PROMPT.format(text=text)
     try:
-        llm_response = ollama.chat(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": 0}
+        raw = chat(
+            prompt=prompt,
+            system="You are a Czech business registry analyst. Return ONLY valid JSON, no explanation, no markdown, no code blocks."
         )
-        raw = llm_response.message.content.strip()
         raw = re.sub(r"^```json\s*", "", raw)
         raw = re.sub(r"^```\s*", "", raw)
         raw = re.sub(r"\s*```$", "", raw)
@@ -189,5 +187,5 @@ def get_registry_data(company_name: str, ico: str | None = None) -> dict:
 
 if __name__ == "__main__":
     # test with Fidoo by name
-    data = get_registry_data("Alza")
+    data = get_registry_data("Billa")
     print(json.dumps(data, ensure_ascii=False, indent=2))
