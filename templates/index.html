@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>web2features</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen font-mono">
+
+    <div class="max-w-3xl mx-auto px-6 py-16">
+
+        <!-- header -->
+        <div class="mb-12">
+            <h1 class="text-3xl font-bold text-white mb-2">web2features</h1>
+            <p class="text-gray-400">Extract structured company intelligence from the web</p>
+        </div>
+
+        <!-- form -->
+        <form id="analyzeForm" class="space-y-4 mb-10">
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Company name</label>
+                <input type="text" name="name" placeholder="Fidoo"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3
+                           text-white placeholder-gray-600 focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Website URL</label>
+                <input type="text" name="url" placeholder="https://www.fidoo.com"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3
+                           text-white placeholder-gray-600 focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">
+                    IČO <span class="text-gray-600">(optional — Czech companies only)</span>
+                </label>
+                <input type="text" name="ico" placeholder="28145780"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3
+                           text-white placeholder-gray-600 focus:outline-none focus:border-blue-500">
+            </div>
+            <button type="submit" id="submitBtn"
+                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold
+                       py-3 rounded-lg transition-colors duration-200">
+                Analyze
+            </button>
+        </form>
+
+        <!-- progress log -->
+        <div id="progressLog" class="hidden mb-8">
+            <div class="flex items-center gap-2 mb-3">
+                <div id="spinner" class="w-4 h-4 border-2 border-blue-500 border-t-transparent
+                                         rounded-full animate-spin hidden"></div>
+                <span class="text-sm text-gray-400">Pipeline running...</span>
+            </div>
+            <div id="logLines" class="space-y-1 text-sm text-gray-500 font-mono"></div>
+        </div>
+
+        <!-- results -->
+        <div id="results" class="hidden space-y-6">
+
+            <!-- features card -->
+            <div id="featuresCard" class="hidden bg-gray-900 border border-gray-800
+                                           rounded-xl p-6">
+                <h2 class="text-lg font-semibold text-white mb-4">Company features</h2>
+                <div id="featuresContent" class="space-y-3"></div>
+            </div>
+
+            <!-- registry card -->
+            <div id="registryCard" class="hidden bg-gray-900 border border-gray-800
+                                           rounded-xl p-6">
+                <h2 class="text-lg font-semibold text-white mb-4">
+                    Czech business registry
+                </h2>
+                <div id="registryContent" class="space-y-3"></div>
+            </div>
+
+        </div>
+    </div>
+
+<script>
+    const form = document.getElementById("analyzeForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const progressLog = document.getElementById("progressLog");
+    const logLines = document.getElementById("logLines");
+    const spinner = document.getElementById("spinner");
+    const results = document.getElementById("results");
+    const featuresCard = document.getElementById("featuresCard");
+    const featuresContent = document.getElementById("featuresContent");
+    const registryCard = document.getElementById("registryCard");
+    const registryContent = document.getElementById("registryContent");
+
+    function addLog(message, color = "text-gray-500") {
+        const line = document.createElement("div");
+        line.className = color;
+        line.textContent = "→ " + message;
+        logLines.appendChild(line);
+        logLines.scrollTop = logLines.scrollHeight;
+    }
+
+    function renderField(label, value) {
+        if (!value || (Array.isArray(value) && value.length === 0)) return "";
+        const div = document.createElement("div");
+        div.className = "flex gap-3";
+        div.innerHTML = `
+            <span class="text-gray-500 w-40 shrink-0">${label}</span>
+            <span class="text-gray-200">${Array.isArray(value) ? value.join(", ") : value}</span>
+        `;
+        return div;
+    }
+
+    function renderFeatures(data) {
+        featuresContent.innerHTML = "";
+        const fields = [
+            ["Company", data.company_name],
+            ["Industry", data.industry],
+            ["Country", data.hq_country],
+            ["Size", data.company_size_signal],
+            ["Product", data.main_product_or_service],
+            ["Customer", data.target_customer],
+            ["Growth signals", data.growth_signals],
+            ["Risk flags", data.risk_flags],
+        ];
+        fields.forEach(([label, value]) => {
+            const el = renderField(label, value);
+            if (el) featuresContent.appendChild(el);
+        });
+        featuresCard.classList.remove("hidden");
+        results.classList.remove("hidden");
+    }
+
+    function renderRegistry(data) {
+        registryContent.innerHTML = "";
+        const fields = [
+            ["ICO", data.ico],
+            ["Legal form", data.legal_form],
+            ["Founded", data.founded],
+            ["Address", data.address],
+            ["Capital (CZK)", data.capital_czk?.toLocaleString()],
+            ["Parent company", data.parent_company],
+            ["Board members", data.board_members?.map(b =>
+                typeof b === "object" ? `${b.name} (${b.role})` : b
+            )],
+            ["Recent changes", data.recent_changes],
+        ];
+        fields.forEach(([label, value]) => {
+            const el = renderField(label, value);
+            if (el) registryContent.appendChild(el);
+        });
+        registryCard.classList.remove("hidden");
+        results.classList.remove("hidden");
+    }
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        // reset
+        logLines.innerHTML = "";
+        featuresContent.innerHTML = "";
+        registryContent.innerHTML = "";
+        featuresCard.classList.add("hidden");
+        registryCard.classList.add("hidden");
+        results.classList.add("hidden");
+        progressLog.classList.remove("hidden");
+        spinner.classList.remove("hidden");
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Running...";
+
+        const formData = new FormData(form);
+
+        const response = await fetch("/analyze", {
+            method: "POST",
+            body: formData
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split("\n");
+
+            for (const line of lines) {
+                if (!line.startsWith("data: ")) continue;
+                const json = JSON.parse(line.slice(6));
+
+                if (json.type === "status") {
+                    addLog(json.data.message, "text-gray-500");
+                } else if (json.type === "features") {
+                    addLog("Features extracted", "text-green-500");
+                    renderFeatures(json.data.data);
+                } else if (json.type === "registry") {
+                    addLog("Registry data found", "text-green-500");
+                    renderRegistry(json.data.data);
+                } else if (json.type === "error") {
+                    addLog(json.data.message, "text-red-500");
+                } else if (json.type === "done") {
+                    addLog("Done", "text-blue-400");
+                    spinner.classList.add("hidden");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Analyze";
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
