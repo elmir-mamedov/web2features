@@ -10,9 +10,15 @@ def scrape_company_text(url: str, max_chars: int = 3000) -> str:
     try:
         response = requests.get(url, impersonate="chrome120", timeout=10)
         response.raise_for_status()
-    except Exception as e:
-        logger.error(f"Failed to fetch {url}: {e}")
-        return ""
+    except Exception:
+        # fallback — try without SSL verification for sites with bad certificates
+        try:
+            response = requests.get(url, impersonate="chrome120", timeout=10, verify=False)
+            response.raise_for_status()
+            logger.warning(f"SSL verification disabled for {url}")
+        except Exception as e:
+            logger.error(f"Failed to fetch {url}: {e}")
+            return ""
     soup = BeautifulSoup(response.text, "html.parser")
 
     # Remove noise
