@@ -5,9 +5,15 @@ from logger import setup_logger
 
 logger = setup_logger()
 
+def extract_domain_from_url(url: str) -> str:
+    SUBDOMAIN_PREFIXES = {"www", "en", "cs", "de", "fr", "pl", "sk", "hu", "www2"}
+    hostname = url.replace("https://", "").replace("http://", "").split("/")[0]
+    parts = hostname.split(".")
+    meaningful = [p for p in parts if p not in SUBDOMAIN_PREFIXES]
+    return meaningful[0] if meaningful else parts[0]
 
 def fetch_company_news(company_name: str, company_url: str = "", max_articles: int = 10) -> list[dict]:
-    domain = company_url.replace("https://www.", "").replace("https://", "").split("/")[0].split(".")[0]
+    domain = extract_domain_from_url(company_url)
     query = f"{company_name} {domain}".strip().replace(" ", "+") if domain else company_name
     url = f"https://www.bing.com/news/search?q={query}&format=rss" # Using company url in query reduces entity ambiguity
 
