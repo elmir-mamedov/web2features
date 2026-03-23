@@ -1,6 +1,6 @@
 import json
 from flask import Flask, render_template, request, Response, stream_with_context
-from scraper import scrape_company_text
+from company_website_scraper import scrape_company_text
 from extractor import extract_company_features
 from news_scraper import fetch_company_news, format_news_for_prompt
 from registry_scraper import get_registry_data
