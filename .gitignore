@@ -8,3 +8,5 @@ output/
 logs/
 *.csv
 .env
+/data
+/unit_tests

@@ -1,7 +1,9 @@
 import pandas as pd
 import json
 import os
-from scraper import scrape_company_text
+from company_website_scraper import scrape_company_text
+from sitemap_scraper import get_relevant_urls
+from company_website_scraper import scrape_multiple_urls
 from extractor import extract_company_features, CompanyFeatures
 from news_scraper import fetch_company_news, format_news_for_prompt
 from logger import setup_logger
@@ -14,7 +16,7 @@ logger = setup_logger()
 
 COMPANIES = [
     {"name": "Fidoo",       "url": "https://www.fidoo.com"},
-    {"name": "Ahold Delhaize", "url": "https://aholddelhaize.com"},
+    {"name": "Albert", "url": "https://www.albert.cz/"},
     {"name": "Alza",        "url": "https://www.alza.cz"},
 ]
 
@@ -72,7 +74,8 @@ def run_pipeline(companies: list, output_path: str = "output/features.csv"):
         ico  = company.get("ico") or None  # optional field
 
         logger.info(f"[{name}] Scraping {url} ...")
-        text = scrape_company_text(url)
+        urls_to_scrape = get_relevant_urls(url)
+        text = scrape_multiple_urls(urls_to_scrape)
         if not text:
             logger.warning(f"[{name}] Skipping — nothing scraped.")
             continue
@@ -102,7 +105,7 @@ def run_pipeline(companies: list, output_path: str = "output/features.csv"):
 
         # registry lookup — only attempt for Czech companies
         logger.info(f"[{name}] Looking up registry...")
-        registry_data = get_registry_data(name, ico=ico)
+        registry_data = get_registry_data(features.company_name or name, ico=ico)
         if registry_data:
             registry_rows.append({
                 "input_name": name,

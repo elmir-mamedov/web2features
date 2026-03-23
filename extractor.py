@@ -143,7 +143,7 @@ def extract_company_features(
 
 
 if __name__ == "__main__":
-    from scraper import scrape_company_text
+    from company_website_scraper import scrape_company_text
 
     url = "https://www.billa.cz"
     text = scrape_company_text(url)

@@ -32,9 +32,34 @@ def scrape_company_text(url: str, max_chars: int = 3000) -> str:
     logger.debug(f"Scraped {len(result)} chars from {url}")
     return result
 
+def scrape_multiple_urls(urls: list[str], max_chars_per_page: int = 2000) -> str:
+    """
+    Scrape multiple URLs and concatenate the text.
+    Each page is labeled so the LLM knows where content comes from.
+    """
+    all_text = []
+
+    for url in urls:
+        text = scrape_company_text(url, max_chars=max_chars_per_page)
+        if text:
+            all_text.append(f"--- PAGE: {url} ---\n{text}")
+            logger.info(f"Scraped {len(text)} chars from {url}")
+            logger.debug(f"Content from {url}:\n{text[:2000]}")
+        else:
+            logger.warning(f"Nothing scraped from {url}")
+
+    return "\n\n".join(all_text)
 
 if __name__ == "__main__":
-    url = "https://www.fidoo.com"
-    text = scrape_company_text(url)
-    print(f"Scraped {len(text)} characters\n")
-    print(text[:500])
+    from sitemap_scraper import get_relevant_urls
+
+    for test_url in ["https://www.albert.cz/"]:
+        print(f"\n{'='*60}")
+        print(f"TESTING: {test_url}")
+        print('='*60)
+
+        urls = get_relevant_urls(test_url)
+        text = scrape_multiple_urls(urls)
+        print(f"\n{'=' * 60}")
+        print(f"TOTAL CHARS SCRAPED: {len(text)}")
+        print('=' * 60)
