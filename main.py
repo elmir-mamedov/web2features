@@ -105,7 +105,7 @@ def run_pipeline(companies: list, output_path: str = "output/features.csv"):
 
         # registry lookup — only attempt for Czech companies
         logger.info(f"[{name}] Looking up registry...")
-        registry_data = get_registry_data(name, ico=ico)
+        registry_data = get_registry_data(features.company_name or name, ico=ico)
         if registry_data:
             registry_rows.append({
                 "input_name": name,
