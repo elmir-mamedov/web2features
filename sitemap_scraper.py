@@ -45,10 +45,6 @@ def prefilter_urls(urls: list[str], base_url: str) -> list[str]:
     return filtered
 
 def get_sitemap_urls(sitemap_url: str) -> list[str]:
-    """
-    Fetch all page URLs from a sitemap or sitemap index.
-    Recursively follows sitemap index entries.
-    """
     try:
         r = requests.get(sitemap_url, timeout=10)
         r.raise_for_status()
@@ -56,7 +52,17 @@ def get_sitemap_urls(sitemap_url: str) -> list[str]:
         logger.error(f"Failed to fetch sitemap {sitemap_url}: {e}")
         return []
 
-    soup = BeautifulSoup(r.text, "xml")
+    # handle gzip compressed sitemaps
+    content = r.content
+    if sitemap_url.endswith(".gz"):
+        import gzip
+        try:
+            content = gzip.decompress(content)
+        except Exception as e:
+            logger.error(f"Failed to decompress gzip sitemap {sitemap_url}: {e}")
+            return []
+
+    soup = BeautifulSoup(content, "xml")
 
     # sitemap index — recurse into sub-sitemaps
     sub_sitemaps = soup.find_all("sitemap")
@@ -118,31 +124,57 @@ URLs:
         logger.error(f"LLM URL selection failed: {e}")
         return []
 
-
-def get_relevant_urls(base_url: str) -> list[str]:
+def find_sitemap_url(base_url: str) -> str | None:
     """
-    Main entry point.
-    Returns list of URLs to scrape — always includes base_url,
-    plus up to 3 additional pages selected by LLM from sitemap.
+    Find sitemap URL for a given base URL.
+    First tries /sitemap.xml, then falls back to robots.txt.
+    Returns sitemap URL or None if not found.
     """
     base = base_url.rstrip("/")
-    sitemap_url = f"{base}/sitemap.xml"
+
+    # try standard location first
+    standard = f"{base}/sitemap.xml"
+    try:
+        r = requests.get(standard, timeout=10)
+        if r.status_code == 200:
+            return standard
+    except Exception:
+        pass
+
+    # fall back to robots.txt
+    try:
+        r = requests.get(f"{base}/robots.txt", timeout=10)
+        r.raise_for_status()
+        for line in r.text.splitlines():
+            if line.lower().startswith("sitemap:"):
+                sitemap_url = line.split(":", 1)[1].strip()
+                logger.info(f"Found sitemap via robots.txt: {sitemap_url}")
+                return sitemap_url
+    except Exception as e:
+        logger.warning(f"robots.txt not found for {base_url}: {e}")
+
+    return None
+
+def get_relevant_urls(base_url: str) -> list[str]:
+    base = base_url.rstrip("/")
+
+    sitemap_url = find_sitemap_url(base_url)
+    if not sitemap_url:
+        logger.warning(f"No sitemap found for {base_url} — scraping homepage only")
+        return [base_url]
 
     logger.info(f"Fetching sitemap from {sitemap_url}")
     urls = get_sitemap_urls(sitemap_url)
 
     if not urls:
-        logger.warning(f"No sitemap found for {base_url} — will scrape homepage only")
+        logger.warning(f"No URLs found in sitemap — scraping homepage only")
         return [base_url]
 
     logger.info(f"Found {len(urls)} URLs in sitemap")
     additional = select_relevant_urls(urls, base_url)
-
-    # homepage always first, then LLM-selected pages
     return [base_url] + additional
 
-
 if __name__ == "__main__":
-    for test_url in ["https://www.fidoo.com", "https://en.atg.cz"]:
+    for test_url in ["https://www.albert.cz", "https://en.atg.cz"]:
         print(f"\n--- {test_url} ---")
         urls = get_relevant_urls(test_url)

@@ -53,7 +53,7 @@ def scrape_multiple_urls(urls: list[str], max_chars_per_page: int = 2000) -> str
 if __name__ == "__main__":
     from sitemap_scraper import get_relevant_urls
 
-    for test_url in ["https://www.fidoo.com"]:
+    for test_url in ["https://www.albert.cz/"]:
         print(f"\n{'='*60}")
         print(f"TESTING: {test_url}")
         print('='*60)
